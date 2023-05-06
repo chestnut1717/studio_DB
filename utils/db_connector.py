@@ -51,34 +51,43 @@ class DBManagement:
         self.cnx.commit()
 
     def create_table(self, table_name: str) -> None:
-        self.cursor.execute(f"""CREATE TABLE {table_name} 
-                        (
-                            opnSfTeamCode CHAR(7) NOT NULL,
-                            mgtNo VARCHAR(40) NOT NULL,
-                            opnSvcId CHAR(10) NOT NULL,
-                            updateGbn CHAR(1),
-                            updateDt DATETIME,
-                            bplcNm VARCHAR(200),
-                            sitePostNo VARCHAR(7),
-                            siteWhlAddr VARCHAR(500),
-                            rdnPostNo VARCHAR(7),
-                            rdnWhlAddr VARCHAR(500),
-                            trdStateGbn VARCHAR(2),
-                            dtlStateGbn VARCHAR(4),
-                            x CHAR(20),
-                            y CHAR(20),
-                            lastModTs DATETIME,
-                            uptaeNm VARCHAR(100),
-                            coordinates POINT,
+        # Check if the table exists
+        self.cursor.execute(f"SHOW TABLES LIKE '{table_name}'")
+        result = self.cursor.fetchone()
 
-                        PRIMARY KEY(opnSfTeamCode, mgtNo, opnSvcId)
-                        )
-                        """)
-        self.table_name = table_name
+        # If the table does not exist, create it
+        if not result:
+            self.cursor.execute(f"""CREATE TABLE {table_name} 
+                                (
+                                    opnSfTeamCode CHAR(7) NOT NULL,
+                                    mgtNo VARCHAR(40) NOT NULL,
+                                    opnSvcId CHAR(10) NOT NULL,
+                                    updateGbn CHAR(1),
+                                    updateDt DATETIME,
+                                    bplcNm VARCHAR(200),
+                                    sitePostNo VARCHAR(7),
+                                    siteWhlAddr VARCHAR(500),
+                                    rdnPostNo VARCHAR(7),
+                                    rdnWhlAddr VARCHAR(500),
+                                    trdStateGbn VARCHAR(2),
+                                    dtlStateGbn VARCHAR(4),
+                                    x CHAR(20),
+                                    y CHAR(20),
+                                    lastModTs DATETIME,
+                                    uptaeNm VARCHAR(100),
+                                    coordinates POINT,
+
+                                PRIMARY KEY(opnSfTeamCode, mgtNo, opnSvcId)
+                                )
+                                """)
+            self.table_name = table_name
+            self.commit()
+        else:
+            print(f"Table '{table_name}' already exists.")
+
 
     # record단위로 commit하지 않음
-    def update_record(self, row: pd.Series, columns: List[str]) -> None:
-
+    def update_record(self, table_name: str, row: pd.Series, columns: List[str]) -> None:
         # Query에 넣기 위한 문자열 모음
         columns_string = ', '.join(columns)
 
@@ -87,16 +96,17 @@ class DBManagement:
         point_query = f"ST_GeomFromText('POINT({row[-2]} {row[-1]})')"
 
         # If duplicated : Only update values not including coordinates(POINT)
-        # If not duplicated : insert all values including coordinates 
+        # If not duplicated : insert all values including coordinates
         update_query = ",\n".join([f"{col}=IF({col}=VALUES({col}), {col}, VALUES({col}))" for col in columns[:-1]])
         insert_query = f"""
-                        INSERT INTO {self.table_name} ({columns_string})
+                        INSERT INTO {table_name} ({columns_string})
                         VALUES ({value_query}, {point_query})
-                        ON DUPLICATE KEY 
+                        ON DUPLICATE KEY
                         UPDATE {update_query};
                         """
-        
+
         self.cursor.execute(insert_query)
+
 
     def delete_record(self, opnSfTeamCode: str, mgtNo: str, opnSvcId: str) -> None:
         delete_query = f"""
@@ -104,3 +114,11 @@ class DBManagement:
                         WHERE opnSfTeamCode = '{opnSfTeamCode}' and mgtNo = '{mgtNo}' and opnSvcId = '{opnSvcId}';
                         """
         self.cursor.execute(delete_query)
+        
+    def insert_image_path(self, image_path: str, related_table_name: str, related_table_id: int) -> None:
+        insert_query = f"""
+                    INSERT IGNORE INTO image_table (image_path, related_table_name, related_table_id)
+                    VALUES (%s, %s, %s)
+                    """
+        self.cursor.execute(insert_query, (image_path, related_table_name, related_table_id))
+        self.commit()
