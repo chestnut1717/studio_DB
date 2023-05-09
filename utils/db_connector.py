@@ -1,6 +1,5 @@
 import mysql.connector
 import pandas as pd
-import time
 from typing import List
 
 class DBManagement:
@@ -16,8 +15,85 @@ class DBManagement:
         self.cursor = self.cnx.cursor()
         self.__table_name = None
 
+    def set_table(self, table_path: str) -> pd.DataFrame:
+        table_df = pd.read_csv(table_path)
+
+        return table_df
+
+    def get_columns(self, table_df: pd.DataFrame) -> List[str]:
+        return table_df['Columns']
+
+
+    def create_table(self, table_name: str, table: pd.DataFrame) -> None:
+        # Check if the table exists
+        self.cursor.execute(f"SHOW TABLES LIKE '{table_name}'")
+        result = self.cursor.fetchone()
+
+        # If the table does not exist, create table
+        if not result:
+            create_query = f"CREATE TABLE {table_name}\n" +"(\n"
+            
+            # Build create query
+            iter_count = len(table)
+            for i in range(iter_count):
+                row = table.iloc[i,:-1]
+                column_query = " ".join([i for i in row if isinstance(i, str)])
+                create_query +=  column_query + ",\n"
+
+            primary_query = ", ".join(list(table['Columns'][~table['Indexes'].isna()]))
+            create_query += f"PRIMARY KEY({primary_query})\n);"
+
+            self.cursor.execute(create_query)
+            self.table_name = table_name
+
+        else:
+            print(f"Table '{table_name}' already exists.")
+
+    def insert_table(self, table_name: str, row: pd.Series, columns: List[str]) -> None:
+        columns_string = ', '.join(columns)
+
+        # the last two value in row is the coordinates [.., lat, lon]
+        value_query = ", ".join([DBManagement.replace_quote(r) for r in row])
+        point_query = f"ST_GeomFromText('POINT({row[-2]} {row[-1]})')"
+
+        insert_query = f"""
+                        INSERT INTO {table_name} ({columns_string})
+                        VALUES ({value_query}, {point_query});
+                        """
+        self.cursor.execute(insert_query)
+
+
+    # record단위로 commit하지 않음
+    def update_table(self, table_name: str, row: pd.Series, columns: List[str]) -> None:
+
+        columns_string = ', '.join(columns)
+
+        # the last two value in row is the coordinates [.., lat, lon] or [.., x, y]
+        value_query = ", ".join([DBManagement.replace_quote(r) for r in row[:-2]])
+        point_query = f"ST_GeomFromText('POINT({row[-2]} {row[-1]})')"
+
+        # If duplicated : Only update values not including coordinates(POINT)
+        # If not duplicated : insert all values including coordinates
+        condition_query = ",\n".join([f"{col}=IF({col}=VALUES({col}), {col}, VALUES({col}))" for col in columns[:-1]])
+        update_query = f"""
+                        INSERT INTO {table_name} ({columns_string})
+                        VALUES ({value_query}, {point_query})
+                        ON DUPLICATE KEY
+                        UPDATE {condition_query};
+                        """
+
+        self.cursor.execute(update_query)
+
+
+    def delete_record(self, opnSfTeamCode: str, mgtNo: str, opnSvcId: str) -> None:
+        delete_query = f"""
+                        DELETE FROM {self.table_name}
+                        WHERE opnSfTeamCode = '{opnSfTeamCode}' and mgtNo = '{mgtNo}' and opnSvcId = '{opnSvcId}';
+                        """
+        self.cursor.execute(delete_query)
+
     @staticmethod
-    def sqlquote(value: str) -> str:
+    def replace_quote(value: str) -> str:
         if value == 'NULL':
             return value
         return '"{}"'.format(str(value).replace("'", "''"))
@@ -35,7 +111,6 @@ class DBManagement:
         self.commit()
         return result
 
-
     # getter    
     @property
     def table_name(self) -> str:
@@ -50,57 +125,12 @@ class DBManagement:
     def commit(self) -> None:
         self.cnx.commit()
 
-    def create_table(self, table_name: str) -> None:
-        self.cursor.execute(f"""CREATE TABLE {table_name} 
-                        (
-                            opnSfTeamCode CHAR(7) NOT NULL,
-                            mgtNo VARCHAR(40) NOT NULL,
-                            opnSvcId CHAR(10) NOT NULL,
-                            updateGbn CHAR(1),
-                            updateDt DATETIME,
-                            bplcNm VARCHAR(200),
-                            sitePostNo VARCHAR(7),
-                            siteWhlAddr VARCHAR(500),
-                            rdnPostNo VARCHAR(7),
-                            rdnWhlAddr VARCHAR(500),
-                            trdStateGbn VARCHAR(2),
-                            dtlStateGbn VARCHAR(4),
-                            x CHAR(20),
-                            y CHAR(20),
-                            lastModTs DATETIME,
-                            uptaeNm VARCHAR(100),
-                            coordinates POINT,
 
-                        PRIMARY KEY(opnSfTeamCode, mgtNo, opnSvcId)
-                        )
-                        """)
-        self.table_name = table_name
-
-    # record단위로 commit하지 않음
-    def update_record(self, row: pd.Series, columns: List[str]) -> None:
-
-        # Query에 넣기 위한 문자열 모음
-        columns_string = ', '.join(columns)
-
-        # the last two value in row is the coordinates [.., lat, lon]
-        value_query = ", ".join([DBManagement.sqlquote(r) for r in row[:-2]])
-        point_query = f"ST_GeomFromText('POINT({row[-2]} {row[-1]})')"
-
-        # If duplicated : Only update values not including coordinates(POINT)
-        # If not duplicated : insert all values including coordinates 
-        update_query = ",\n".join([f"{col}=IF({col}=VALUES({col}), {col}, VALUES({col}))" for col in columns[:-1]])
-        insert_query = f"""
-                        INSERT INTO {self.table_name} ({columns_string})
-                        VALUES ({value_query}, {point_query})
-                        ON DUPLICATE KEY 
-                        UPDATE {update_query};
-                        """
         
-        self.cursor.execute(insert_query)
-
-    def delete_record(self, opnSfTeamCode: str, mgtNo: str, opnSvcId: str) -> None:
-        delete_query = f"""
-                        DELETE FROM {self.table_name}
-                        WHERE opnSfTeamCode = '{opnSfTeamCode}' and mgtNo = '{mgtNo}' and opnSvcId = '{opnSvcId}';
-                        """
-        self.cursor.execute(delete_query)
+    def insert_image_path(self, image_path: str, related_table_name: str, related_table_id: int) -> None:
+        insert_query = f"""
+                    INSERT IGNORE INTO image_table (image_path, related_table_name, related_table_id)
+                    VALUES (%s, %s, %s)
+                    """
+        self.cursor.execute(insert_query, (image_path, related_table_name, related_table_id))
+        self.commit()
