@@ -1,4 +1,0 @@
-host= localhost
-user = 유저 이름
-password = 비밀번호
-database = 데이터베이스이름
