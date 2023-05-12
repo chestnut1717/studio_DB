@@ -234,12 +234,12 @@ class LocalDataPreprocess(DataPreprocess):
     @staticmethod
     def set_columns_dict(path: str) -> None:
 
-        local_columns_df = pd.read_csv(path)
-        from_list = list(local_columns_df['From'])
-        to_list = list(local_columns_df['To'])
-        local_columns_dict = {k: v for k, v in zip(from_list, to_list)}
+        columns_df = pd.read_csv(path)
+        from_list = list(columns_df['From'])
+        to_list = list(columns_df['To'])
+        columns_dict = {k: v for k, v in zip(from_list, to_list)}
 
-        LocalDataPreprocess.columns_dict = local_columns_dict
+        LocalDataPreprocess.columns_dict = columns_dict
     
 
 class SeoulBusDataPreprocess(DataPreprocess):
@@ -252,6 +252,7 @@ class SeoulBusDataPreprocess(DataPreprocess):
             """
             1. Column realign
             2. Replace String
+            3. Replace NaN
             """
 
             # 1. Column realign
@@ -263,6 +264,8 @@ class SeoulBusDataPreprocess(DataPreprocess):
 
             # 3. Replace NaN
             df = SeoulBusDataPreprocess.replace_nan(df)
+
+            df.reset_index(drop=True, inplace=True)
 
             return df
         
@@ -285,10 +288,8 @@ class SeoulBusDataPreprocess(DataPreprocess):
         """
         
         columns_values = list(columns_dict.values())
-
         new_df = df.rename(columns = columns_dict)[columns_values]
    
-        
         return new_df
 
     @staticmethod
@@ -345,9 +346,9 @@ class SeoulBusDataPreprocess(DataPreprocess):
     @staticmethod
     def set_columns_dict(path: str) -> None:
 
-        seoul_columns_df = pd.read_csv(path)
-        from_list = list(seoul_columns_df['From'])
-        to_list = list(seoul_columns_df['To'])
+        columns_df = pd.read_csv(path)
+        from_list = list(columns_df['From'])
+        to_list = list(columns_df['To'])
         columns_dict = {k: v for k, v in zip(from_list, to_list)}
 
         SeoulBusDataPreprocess.columns_dict = columns_dict
@@ -374,6 +375,8 @@ class OtherBusDataPreprocess(DataPreprocess):
 
             # 3. replace NaN
             df = OtherBusDataPreprocess.replace_nan(df)
+
+            df.reset_index(drop=True, inplace=True)
 
             return df
         
@@ -432,9 +435,7 @@ class OtherBusDataPreprocess(DataPreprocess):
         """
         Replace missing value to NaN(np.nan)
         """
-        """
-        Replace missing value to NaN(np.nan)
-        """
+
 
         # 좌표값이 결측치인 경우, 공백인 경우를 모두 제거한다
         ## 좌표값이 공백인 경우를 모두 결측치로 변경
@@ -463,9 +464,85 @@ class OtherBusDataPreprocess(DataPreprocess):
     @staticmethod
     def set_columns_dict(path: str) -> None:
 
-        seoul_columns_df = pd.read_csv(path)
-        from_list = list(seoul_columns_df['From'])
-        to_list = list(seoul_columns_df['To'])
+        columns_df = pd.read_csv(path)
+        from_list = list(columns_df['From'])
+        to_list = list(columns_df['To'])
         columns_dict = {k: v for k, v in zip(from_list, to_list)}
 
         OtherBusDataPreprocess.columns_dict = columns_dict
+
+
+class MetroDataPreprocess(DataPreprocess):
+    @staticmethod
+    def preprocess(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        1. Column realign
+        2. Replace NaN
+        """
+        
+        # 1. Column realign
+        df = MetroDataPreprocess.column_realign(df, MetroDataPreprocess.columns_dict)
+
+        # 2. Replace NaN
+        df = MetroDataPreprocess.replace_nan(df)
+
+        df.reset_index(drop=True, inplace=True)
+
+        return df
+    
+    @staticmethod
+    def column_realign(df:pd.DataFrame, columns_dict: Dict) -> pd.DataFrame:
+        """
+        Realign columns to insert DB
+        """
+
+        columns_values = list(columns_dict.values())
+        new_df = df.rename(columns = columns_dict)[columns_values]
+   
+        return new_df
+
+    @staticmethod
+    def replace_string(df: pd.DataFrame, replace_column: List[str]) -> pd.DataFrame:
+        """
+        Replace string by column to prevent error
+        """
+        pass
+
+    @staticmethod
+    def type_change(df: pd.DataFrame, columns_list: List[str], change_type: str) -> pd.DataFrame:
+        """
+        Type change by column
+        """
+        pass
+
+    @staticmethod
+    def replace_nan(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Replace missing value to NaN(np.nan)
+        """
+        # 좌표값이 결측치인 경우, 공백인 경우를 모두 제거한다
+        ## 좌표값이 공백인 경우를 모두 결측치로 변경
+        df.loc[:, ['lon', 'lat']] = df.loc[:, ['lon', 'lat']].replace(r'^\s*$', np.nan, regex=True)
+
+        ## 좌표값이 결측치이면 삭제
+        df = df[ ~df['lon'].isna() & ~df['lat'].isna() ]
+
+        ## 좌표값이 결측치이고, 두 주소 모두(lonmAdr와 lonmAdr) 결측치인 경우 삭제 후 
+        # df[ (~df['stinLocLon'].isna() & ~df['stinLocLat'].isna()) | ~(df['lonmAdr'].isna() & df['roadNmAdr'].isna())]
+
+        # 나머지 값들은 결측치나 공백으로 이루어진 것을 null로 바꿈
+        ## MySQL에서 NULL값으로 인식하도록 하기 위함
+        df.fillna('NULL', inplace=True)
+        df.replace(r'^\s*$', 'NULL', regex=True, inplace=True)
+
+        return df
+
+    @staticmethod
+    def set_columns_dict(path: str) -> None:
+
+        columns_df = pd.read_csv(path)
+        from_list = list(columns_df['From'])
+        to_list = list(columns_df['To'])
+        columns_dict = {k: v for k, v in zip(from_list, to_list)}
+
+        MetroDataPreprocess.columns_dict = columns_dict
