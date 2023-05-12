@@ -166,11 +166,12 @@ excel_data/*
 
 # ignore secret file
 secret_key/*
+Secret
 
 # ignore .ipynb
 *.ipynb
 
 # example py
-example.upload.py
+example_upload.py
 
-.DS_Store
+*.DS_Store

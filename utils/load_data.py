@@ -342,10 +342,8 @@ class RequestMetroData(RequestData):
         self.info = {
                     'serviceKey' : self.auth_key,
                     'format' : 'JSON',
-                    'lnCd' : '1',
-                    'railOprIsttCd' : "KR",
-                    "railOprIsttCd" : "135",
-                    "stinNm" : '용산',
+                    'railOprIsttCd' : None,
+                    'lnCd' : None,
                     }
 
     def request_api(self, params: Dict) -> Dict:
@@ -361,47 +359,56 @@ class RequestMetroData(RequestData):
 
         # text to json
         response_dict = json.loads(response_text)
+
         return response_dict
 
     def get_apidata(self) -> pd.DataFrame:
-        # page_index = info['pageIndex']
-        # page_size = info['pageSize']
-        # opnSvcId = info['opnSvcId']
+        # 가능한 지하철 코드 조회
+        possible_opr_dict = self.get_metro_cd()
 
-        # Request API server
-        response_dict = self.request_api(params=self.info)
-        
-        # Count total to get info how many data are to be changed
-        try:
-            total_data_count = response_dict['result']['header']['paging']['totalCount']
-            if total_data_count < 1:
-                raise EmptyDataFromResponse
-        except Exception as e:
-            print(f"{opnSvcId}서비스에는 {self.start_date}부터 {self.end_date}까지의 데이터가 없습니다")
-            return None
-        
-        iter_count = (total_data_count // page_size)
-        
+        # 빈 데이터프레임 만들기
+        all_dataframe = pd.DataFrame()
 
-        # Make fundamental dataFrame
-        response_dataframe = self.make_dataframe(response_dict)
-        
-        # Iteration for full data
-        for _ in range(iter_count):
-            page_index += 1
-            info['pageIndex'] = page_index
+        for rail_opr, line_list in possible_opr_dict.items():
+            for line in line_list:
+                self.info['railOprIsttCd'] = rail_opr
+                self.info['lnCd'] = line
 
-            response_dict = self.request_api(params=info)
-            tmp_dataframe = self.make_dataframe(response_dict)
-            
-            # data concat
-            response_dataframe = pd.concat([response_dataframe, tmp_dataframe])
-            time.sleep(1)
-        
-        # Reset index after concatenation
-        response_dataframe.reset_index(drop=True, inplace=True)
-        print(f"{opnSvcId}서비스의 {self.start_date}부터 {self.end_date}의 데이터를 성공적으로 다운받았습니다")
-        return response_dataframe
+                # request
+                try:
+                    response_dict = self.request_api(params=self.info)
+                    response_df = self.make_dataframe(response_dict)
+                    all_dataframe = all_dataframe.append(response_df, ignore_index=True)
+
+                except Exception as e:
+                    print(e)
+                    print(f"{rail_opr}의 {line}은 데이터가 없습니다")
+
+                time.sleep(1)
+
+        all_dataframe.reset_index(drop=True, inplace=True)
+        return all_dataframe
 
     def make_dataframe(self, response_dict: Dict) -> pd.DataFrame:
-        pass
+        df = pd.json_normalize(response_dict['body'])
+        return df
+
+    def get_metro_cd(self) -> Dict[str, List]:
+        path = './metro_info/metro_info_2023_03_22.xlsx'
+        metro_info_df = pd.read_excel(path, engine='openpyxl')
+        
+        df_lines = metro_info_df[['RAIL_OPR_ISTT_CD', 'LN_CD']].drop_duplicates()
+
+        # Line Code grouped by rail company
+        df_grouped = df_lines.groupby('RAIL_OPR_ISTT_CD')['LN_CD'].apply(list).reset_index(name='LN_CD_LIST')
+
+        # df에서 dict로 변환함
+        df_grouped_dict = {
+            row['RAIL_OPR_ISTT_CD']: row['LN_CD_LIST']
+            for _, row in df_grouped.iterrows()
+        }
+
+        return df_grouped_dict
+
+
+
