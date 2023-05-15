@@ -1,6 +1,7 @@
 import mysql.connector
 import pandas as pd
 from typing import List
+from tqdm import tqdm
 
 class DBManagement:
     def __init__(self, host: str, user: str, password: str, database: str) -> None:
@@ -49,20 +50,36 @@ class DBManagement:
         else:
             print(f"Table '{table_name}' already exists.")
 
-    def insert_table(self, table_name: str, row: pd.Series, columns: List[str]) -> None:
+    # def insert_record(self, table_name: str, row: pd.Series, columns: List[str]) -> None:
+    #     columns_string = ', '.join(columns)
+
+    #     # the last two value in row is the coordinates [.., lat, lon]
+    #     value_query = ", ".join([DBManagement.replace_quote(r) for r in row])
+    #     point_query = f"ST_GeomFromText('POINT({row[-2]} {row[-1]})')"
+
+    #     insert_query = f"""
+    #                     INSERT INTO {table_name} ({columns_string})
+    #                     VALUES ({value_query}, {point_query});
+    #                     """
+    #     self.cursor.execute(insert_query)
+
+    def insert_record(self, table_name:str, df:pd.DataFrame, columns: List[str]) -> None:
+        base_value_query_list = []
         columns_string = ', '.join(columns)
 
-        # the last two value in row is the coordinates [.., lat, lon]
-        value_query = ", ".join([DBManagement.replace_quote(r) for r in row])
-        point_query = f"ST_GeomFromText('POINT({row[-2]} {row[-1]})')"
+        for _, row in df.iterrows():
+            value_query = ", ".join([str(r) for r in row])
+            point_query = f"ST_GeomFromText('POINT({row[-2]} {row[-1]})')"
+            row_query = f"({value_query}, {point_query})"
+            base_value_query_list.append(row_query)
 
         insert_query = f"""
                         INSERT INTO {table_name} ({columns_string})
-                        VALUES ({value_query}, {point_query});
-                        """
+                        VALUES {", ".join(base_value_query_list)};
+                    """
         self.cursor.execute(insert_query)
-
-
+        self.commit()
+            
     # record단위로 commit하지 않음
     def update_table(self, table_name: str, row: pd.Series, columns: List[str]) -> None:
 
@@ -91,6 +108,12 @@ class DBManagement:
                         WHERE opnSfTeamCode = '{opnSfTeamCode}' and mgtNo = '{mgtNo}' and opnSvcId = '{opnSvcId}';
                         """
         self.cursor.execute(delete_query)
+
+    def create_spatial_index(self, table_name: str, coordinates_column: str) -> None:
+
+                             
+        query = f"CREATE SPATIAL INDEX spatial_index ON {table_name}({coordinates_column});"
+        self.cursor.execute(query)
 
     @staticmethod
     def replace_quote(value: str) -> str:
@@ -124,6 +147,12 @@ class DBManagement:
 
     def commit(self) -> None:
         self.cnx.commit()
+
+    def drop_table(self, table_name: str) -> None:
+        
+        drop_query = f"drop table {table_name}"
+        self.cursor.execute(drop_query)
+        self.commit()
 
 
         

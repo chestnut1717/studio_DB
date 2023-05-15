@@ -1,4 +1,4 @@
-﻿Columns,Type,Nullable,Indexes
+﻿Columns,Type,Options,Indexes
 opnSfTeamCode,CHAR(7),NOT NULL,PRIMARY
 mgtNo,VARCHAR(40),NOT NULL,PRIMARY
 opnSvcId,CHAR(10),NOT NULL,PRIMARY
@@ -15,4 +15,6 @@ lastModTs,DATETIME,,
 uptaeNm,VARCHAR(100),,
 x,CHAR(20),,
 y,CHAR(20),,
-coordinates,POINT,,
+lat,CHAR(20),,
+lon,CHAR(20),,
+coordinates,POINT,NOT NULL,

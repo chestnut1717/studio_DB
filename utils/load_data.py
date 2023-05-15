@@ -78,7 +78,7 @@ class RequestLocalData(RequestData):
         """
 
         # Request Localdata API server and get response
-        response = requests.get(RequestLocalData.url, params=params)
+        response = requests.get(RequestLocalData.url, params=params, verify=False)
         response_text = response.text
 
         # Need Exception handling when request data from API server(404, 500)
@@ -159,7 +159,7 @@ class RequestSeoulBusData(RequestData):
 
         url = self.seoul_bus_url + f'{key}/{type}/{service}/{start_index}/{end_index}'
 
-        response = requests.get(url)
+        response = requests.get(url, verify=False)
         response_text = response.text
         response_dict = json.loads(response_text)
 
@@ -232,7 +232,7 @@ class RequestOtherBusData(RequestData):
 
         url = self.other_bus_url
 
-        response = requests.get(url, params=params)
+        response = requests.get(url, params=params, verify=False)
         response_text = response.text
         response_dict = json.loads(response_text)
 
@@ -323,7 +323,7 @@ class RequestOtherBusData(RequestData):
                 '_type' : 'json',
                 }
 
-        response = requests.get(url, params=params)
+        response = requests.get(url, params=params, verify=False)
         response_text = response.text
         response_json = json.loads(response_text)
         possible_city_df = pd.DataFrame(response_json['response']['body']['items']['item'])
@@ -352,7 +352,7 @@ class RequestMetroData(RequestData):
         """
 
         # Request Localdata API server and get response
-        response = requests.get(RequestMetroData.url, params=params)
+        response = requests.get(RequestMetroData.url, params=params, verify=False)
         response_text = response.text
 
         # Need Exception handling when request data from API server(404, 500)
@@ -393,6 +393,7 @@ class RequestMetroData(RequestData):
         df = pd.json_normalize(response_dict['body'])
         return df
 
+    # 각 열차회사에 대한 노선 검색
     def get_metro_cd(self) -> Dict[str, List]:
         path = './metro_info/metro_info_2023_03_22.xlsx'
         metro_info_df = pd.read_excel(path, engine='openpyxl')

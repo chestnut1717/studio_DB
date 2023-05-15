@@ -160,7 +160,7 @@ cython_debug/
 #.idea/
 
 # ignore data file
-csv_data/*
+local_csv_data/*
 transport_data/*
 excel_data/*
 
