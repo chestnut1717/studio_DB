@@ -131,12 +131,79 @@ class DBManagement:
     def commit(self) -> None:
         self.cnx.commit()
 
+<<<<<<< HEAD
     def drop_table(self, table_name: str) -> None:
         
         drop_query = f"drop table {table_name}"
         self.cursor.execute(drop_query)
         self.commit()
 
+=======
+    def create_table(self, table_name: str) -> None:
+        # Check if the table exists
+        self.cursor.execute(f"SHOW TABLES LIKE '{table_name}'")
+        result = self.cursor.fetchone()
+
+        # If the table does not exist, create it
+        if not result:
+            self.cursor.execute(f"""CREATE TABLE {table_name} 
+                                (
+                                    opnSfTeamCode CHAR(7) NOT NULL,
+                                    mgtNo VARCHAR(40) NOT NULL,
+                                    opnSvcId CHAR(10) NOT NULL,
+                                    updateGbn CHAR(1),
+                                    updateDt DATETIME,
+                                    bplcNm VARCHAR(200),
+                                    sitePostNo VARCHAR(7),
+                                    siteWhlAddr VARCHAR(500),
+                                    rdnPostNo VARCHAR(7),
+                                    rdnWhlAddr VARCHAR(500),
+                                    trdStateGbn VARCHAR(2),
+                                    dtlStateGbn VARCHAR(4),
+                                    x CHAR(20),
+                                    y CHAR(20),
+                                    lastModTs DATETIME,
+                                    uptaeNm VARCHAR(100),
+                                    coordinates POINT,
+
+                                PRIMARY KEY(opnSfTeamCode, mgtNo, opnSvcId)
+                                )
+                                """)
+            self.table_name = table_name
+            self.commit()
+        else:
+            print(f"Table '{table_name}' already exists.")
+
+
+    # record단위로 commit하지 않음
+    def update_record(self, table_name: str, row: pd.Series, columns: List[str]) -> None:
+        # Query에 넣기 위한 문자열 모음
+        columns_string = ', '.join(columns)
+
+        # the last two value in row is the coordinates [.., lat, lon]
+        value_query = ", ".join([DBManagement.sqlquote(r) for r in row[:-2]])
+        point_query = f"ST_GeomFromText('POINT({row[-2]} {row[-1]})')"
+
+        # If duplicated : Only update values not including coordinates(POINT)
+        # If not duplicated : insert all values including coordinates
+        update_query = ",\n".join([f"{col}=IF({col}=VALUES({col}), {col}, VALUES({col}))" for col in columns[:-1]])
+        insert_query = f"""
+                        INSERT INTO {table_name} ({columns_string})
+                        VALUES ({value_query}, {point_query})
+                        ON DUPLICATE KEY
+                        UPDATE {update_query};
+                        """
+
+        self.cursor.execute(insert_query)
+
+
+    def delete_record(self, opnSfTeamCode: str, mgtNo: str, opnSvcId: str) -> None:
+        delete_query = f"""
+                        DELETE FROM {self.table_name}
+                        WHERE opnSfTeamCode = '{opnSfTeamCode}' and mgtNo = '{mgtNo}' and opnSvcId = '{opnSvcId}';
+                        """
+        self.cursor.execute(delete_query)
+>>>>>>> origin/main
         
     def insert_image_path(self, image_path: str, related_table_name: str, related_table_id: int) -> None:
         insert_query = f"""
