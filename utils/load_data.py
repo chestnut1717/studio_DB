@@ -1,15 +1,16 @@
 import numpy as np
 import pandas as pd
 
+import os
 import requests
 import json
 
 import datetime
 from pytz import timezone
 import time
-import re
 from typing import List, Dict
 from abc import *
+
 
 # Exception for Empty Data
 class EmptyDataFromResponse(Exception):
@@ -59,6 +60,19 @@ class RequestLocalData(RequestData):
         else:
             self.start_date = args[0]
             self.end_date = args[1]
+    
+    @staticmethod
+    def get_folder_names(path: str) -> List[str]:
+
+        folders_name_list = sorted(os.listdir(path))
+        
+        # if MacOS, remove .DS_Store
+        try:
+            folders_name_list.remove('.DS_Store')
+        except:
+            pass
+
+        return folders_name_list
 
     @staticmethod
     def get_csvdata(path: str, sep:str =',') -> pd.DataFrame:
@@ -131,6 +145,7 @@ class RequestLocalData(RequestData):
     def make_dataframe(self, response_dict: Dict) -> pd.DataFrame:
         df = pd.json_normalize(response_dict['result']['body']['rows'][0]['row'])
         return df
+    
 
 
 class RequestSeoulBusData(RequestData):
