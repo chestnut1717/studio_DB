@@ -1,0 +1,17 @@
+﻿From,To
+개방자치단체코드,opnSfTeamCode
+관리번호,mgtNo
+개방서비스아이디,opnSvcId
+데이터갱신구분,updateGbn
+데이터갱신일자,updateDt
+사업장명,bplcNm
+소재지우편번호,sitePostNo
+소재지전체주소,siteWhlAddr
+도로명우편번호,rdnPostNo
+도로명전체주소,rdnWhlAddr
+영업상태구분코드,trdStateGbn
+상세영업상태코드,dtlStateGbn
+최종수정시점,lastModTs
+업태구분명,uptaeNm
+좌표정보(X),x
+좌표정보(Y),y
