@@ -43,11 +43,24 @@ def db_check():
         # Query 저장
         ## distance = meter
         for facility in facilities_type:
-            radius_query = f"""
-            SELECT bplcNm AS Name, '{facility}' AS Kind, ST_Distance_Sphere({location}, coordinates) AS distance, lat, lon
-            FROM {facility}
-            WHERE ST_Contains(ST_Buffer({location}, {radius_kilo}), coordinates) AND ST_Distance_Sphere({location}, coordinates) < {radius}
-            """
+            if facility == 'bus':
+                radius_query = f"""
+                SELECT StationName AS Name, '{facility}' AS Kind, ST_Distance_Sphere({location}, coordinates) AS distance, lat, lon
+                FROM {facility}
+                WHERE ST_Contains(ST_Buffer({location}, {radius_kilo}), coordinates) AND ST_Distance_Sphere({location}, coordinates) < {radius}
+                """ 
+            elif facility == 'metro':
+                radius_query = f"""
+                SELECT StationName AS Name, '{facility}' AS Kind, ST_Distance_Sphere({location}, coordinates) AS distance, lat, lon
+                FROM {facility}
+                WHERE ST_Contains(ST_Buffer({location}, {radius_kilo}), coordinates) AND ST_Distance_Sphere({location}, coordinates) < {radius}
+                """
+            else:
+                radius_query = f"""
+                SELECT bplcNm AS Name, '{facility}' AS Kind, ST_Distance_Sphere({location}, coordinates) AS distance, lat, lon
+                FROM {facility}
+                WHERE ST_Contains(ST_Buffer({location}, {radius_kilo}), coordinates) AND ST_Distance_Sphere({location}, coordinates) < {radius}
+                """
             
             radius_query_list.append(radius_query)
 
@@ -78,7 +91,7 @@ def db_check():
         
         resp = Response(json.dumps(r), mimetype='application/json', status=200)
 
-        dbm.cnx.close()
+        # dbm.cnx.close()
         print('데이터베이스 연결 종료')
         
         return resp
