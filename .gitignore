@@ -160,9 +160,10 @@ cython_debug/
 #.idea/
 
 # ignore data file
-local_csv_data/*
-transport_data/*
-excel_data/*
+data/local_csv_data/*
+data/local_excel_data/*
+data/metro_data/*.csv
+Data/bus_data/*.csv
 
 # ignore secret file
 secret_key/*
@@ -175,3 +176,7 @@ Secret
 example_upload.py
 
 *.DS_Store
+
+# flask vent
+flask_server
+
