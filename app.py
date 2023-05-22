@@ -30,10 +30,10 @@ def db_check():
         print(f'성공적으로 MySQL {db_info_dict["database"]} 데이터베이스에 연결 완료')
 
         # 문자열 꼴로 들어온 것들을 list 로 변환하기 위함
-        facilities_type = json.loads(request.form['facilities_type'])
-        lat = json.loads(request.form['lat'])
-        lon = json.loads(request.form['lon'])
-        radius = json.loads(request.form['radius'])
+        facilities_type = request.args.get('facilities_type').split(',')
+        lat = float(request.args.get('lat'))
+        lon = float(request.args.get('lon'))
+        radius = int(request.args.get('radius'))
         
         # variable for MySQL
         location = f"POINT({lon}, {lat})"
@@ -65,7 +65,7 @@ def db_check():
             radius_query_list.append(radius_query)
 
         radius_query = " UNION ALL".join(radius_query_list) + "ORDER BY distance;"
-        
+
         # execute
         dbm.cursor.execute(radius_query)
         query_result = dbm.cursor.fetchall()
