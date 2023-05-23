@@ -77,7 +77,8 @@ class DBManagement:
         for _, row in df.iterrows():
             value_query = ", ".join([str(r) for r in row])
             # the last two value in row is the coordinates [.., lat, lon] or [.., x, y]
-            point_query = f"ST_GeomFromText('POINT({row[-2]} {row[-1]})')"
+            ## 4326 = SRID 4326 (WGS94)
+            point_query = f"ST_GeomFromText('POINT({row[-1]} {row[-2]})', 4326)"
             row_query = f"({value_query}, {point_query})"
             base_value_query_list.append(row_query)
 
@@ -96,7 +97,8 @@ class DBManagement:
         for _, row in df.iterrows():
             value_query = ", ".join([str(r) for r in row])
             # the last two value in row is the coordinates [.., lat, lon] or [.., x, y]
-            point_query = f"ST_GeomFromText('POINT({row[-2]} {row[-1]})')"
+            ## 4326 = SRID 4326 (WGS94)
+            point_query = f"ST_GeomFromText('POINT({row[-1]} {row[-2]})', 4326)"
             row_query = f"({value_query}, {point_query})"
             base_value_query_list.append(row_query)
 
