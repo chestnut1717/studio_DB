@@ -33,11 +33,11 @@ def db_check():
         facilities_type = request.args.get('facilities_type').split(',')
         lat = float(request.args.get('lat'))
         lon = float(request.args.get('lon'))
-        radius = int(request.args.get('radius'))
+        radius_meter = int(request.args.get('radius'))
         
         # variable for MySQL
-        location = f"POINT({lon}, {lat})"
-        radius_kilo = radius / 100000
+        ## EPSG 4326
+        location = f'ST_GeomFromText("POINT({lat} {lon})", 4326)'
         radius_query_list = []
         
         # Query 저장
@@ -47,19 +47,19 @@ def db_check():
                 radius_query = f"""
                 SELECT StationName AS Name, '{facility}' AS Kind, ST_Distance_Sphere({location}, coordinates) AS distance, lat, lon
                 FROM {facility}
-                WHERE ST_Contains(ST_Buffer({location}, {radius_kilo}), coordinates) AND ST_Distance_Sphere({location}, coordinates) < {radius}
-                """ 
+                WHERE ST_Contains(ST_Buffer({location}, {radius_meter}), coordinates) AND ST_Distance_Sphere({location}, coordinates) < {radius_meter}
+                """
             elif facility == 'metro':
                 radius_query = f"""
                 SELECT StationName AS Name, '{facility}' AS Kind, ST_Distance_Sphere({location}, coordinates) AS distance, lat, lon
                 FROM {facility}
-                WHERE ST_Contains(ST_Buffer({location}, {radius_kilo}), coordinates) AND ST_Distance_Sphere({location}, coordinates) < {radius}
+                WHERE ST_Contains(ST_Buffer({location}, {radius_meter}), coordinates) AND ST_Distance_Sphere({location}, coordinates) < {radius_meter}
                 """
             else:
                 radius_query = f"""
                 SELECT bplcNm AS Name, '{facility}' AS Kind, ST_Distance_Sphere({location}, coordinates) AS distance, lat, lon
                 FROM {facility}
-                WHERE ST_Contains(ST_Buffer({location}, {radius_kilo}), coordinates) AND ST_Distance_Sphere({location}, coordinates) < {radius}
+                WHERE ST_Contains(ST_Buffer({location}, {radius_meter}), coordinates) AND ST_Distance_Sphere({location}, coordinates) < {radius_meter}
                 """
             
             radius_query_list.append(radius_query)
@@ -96,11 +96,6 @@ def db_check():
         
         return resp
 
-
-
-
-
-        # return radius_query
     else:
         return 'Not GET request', 404
 
