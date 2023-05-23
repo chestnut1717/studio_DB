@@ -6,6 +6,31 @@ import re
 from typing import List, Dict
 from abc import *
 
+class ManageLonLat():
+
+    # return dataframe except rows which have invalid range lon and lat
+    @classmethod
+    def return_vaild_data(cls, df:pd.DataFrame) -> pd.DataFrame:
+        df['lat'] = df['lat'].astype('float64')
+        df['lon'] = df['lon'].astype('float64')
+        df = df[(df['lat'] > 33.1) & (df['lat'] < 38.7) & (df['lon']> 124.59) & (df['lat'] < 131.88)]
+        return df
+    
+    @ classmethod
+    def project_array(cls, coord: np.array, input_type: str, output_type: str) -> np.array:
+        """
+        좌표계 변환 함수
+        - coord: x, y 좌표 정보가 담긴 NumPy Array
+        - p1_type: 입력 좌표계 정보 ex) epsg:2097
+        - p2_type: 출력 좌표계 정보 ex) epsg:4326
+        """
+        # 보정된 중부원점(EPSG:5174)
+        input = pyproj.Proj(init=input_type)
+        output = pyproj.Proj(init=output_type)
+        fx, fy = pyproj.transform(input, output, coord[:, 0], coord[:, 1])
+        return np.dstack([fx, fy])[0]  
+
+
 # 데이터 전처리
 class DataPreprocess(metaclass=ABCMeta):
 
@@ -69,6 +94,7 @@ class LocalDataPreprocess(DataPreprocess):
             4. Filter Cafe, Convenience store
             5. Replace NaN
             6. change epgs:5174 to ordinary coordinates(epsg:4326)
+            7. remove data which have invalid lat, lon
             """
             
             # 1. Column realign 
@@ -101,8 +127,11 @@ class LocalDataPreprocess(DataPreprocess):
             input_type = "epsg:5174"
             output_type = "epsg:4326"
 
-            transformed_coord = LocalDataPreprocess.project_array(original_coord, input_type, output_type)
-            df.loc[:, ['lat', 'lon']] = transformed_coord
+            transformed_coord = ManageLonLat.project_array(original_coord, input_type, output_type)
+            df.loc[:, ['lon', 'lat']] = transformed_coord
+
+            # 7.remove data which have invalid lat, lon
+            df = ManageLonLat.return_vaild_data(df)
 
             df.reset_index(drop=True, inplace=True)
 
@@ -121,7 +150,7 @@ class LocalDataPreprocess(DataPreprocess):
     @staticmethod
     @preprocess_decorator
     def preprocess(df: pd.DataFrame) -> pd.DataFrame:
-        ## API로 가져온 데이터이면,특정 column의 type값을 바꿔줘야 함
+        # API로 가져온 데이터이면,특정 column의 type값을 바꿔줘야 함
         change_cols = ['trdStateGbn', 'dtlStateGbn']
         df = LocalDataPreprocess.type_change(df, change_cols, change_type=int)
 
@@ -182,20 +211,7 @@ class LocalDataPreprocess(DataPreprocess):
     def remove_closed_shop(df: pd.DataFrame) -> pd.DataFrame:
         df.drop(df[( df['trdStateGbn'] == 3 ) | ( df['trdStateGbn'] == 4 ) | ( df['trdStateGbn'] == 5 )].index, inplace=True)
         return df
-    
-    @staticmethod
-    def project_array(coord: np.array, input_type: str, output_type: str) -> np.array:
-        """
-        좌표계 변환 함수
-        - coord: x, y 좌표 정보가 담긴 NumPy Array
-        - p1_type: 입력 좌표계 정보 ex) epsg:2097
-        - p2_type: 출력 좌표계 정보 ex) epsg:4326
-        """
-        # 보정된 중부원점(EPSG:5174)
-        input = pyproj.Proj(init=input_type)
-        output = pyproj.Proj(init=output_type)
-        fx, fy = pyproj.transform(input, output, coord[:, 0], coord[:, 1])
-        return np.dstack([fx, fy])[0]    
+      
     
     @staticmethod
     def filter_cafe(df: pd.DataFrame) -> pd.DataFrame:
@@ -253,6 +269,7 @@ class SeoulBusDataPreprocess(DataPreprocess):
             1. Column realign
             2. Replace String
             3. Replace NaN
+            4. remove data which have invalid lat, lon
             """
 
             # 1. Column realign
@@ -264,7 +281,9 @@ class SeoulBusDataPreprocess(DataPreprocess):
 
             # 3. Replace NaN
             df = SeoulBusDataPreprocess.replace_nan(df)
-
+            
+            # 4.remove data which have invalid lat, lon
+            df = ManageLonLat.return_vaild_data(df)
             df.reset_index(drop=True, inplace=True)
 
             return df
@@ -364,6 +383,8 @@ class OtherBusDataPreprocess(DataPreprocess):
             """
             1. Column realign
             2. Replace String
+            3. replace NaN
+            4.remove data which have invalid lat, lon
             """
 
             # 1. Column realign
@@ -375,6 +396,9 @@ class OtherBusDataPreprocess(DataPreprocess):
 
             # 3. replace NaN
             df = OtherBusDataPreprocess.replace_nan(df)
+                   
+            # 4.remove data which have invalid lat, lon
+            df = ManageLonLat.return_vaild_data(df)
 
             df.reset_index(drop=True, inplace=True)
 
@@ -478,6 +502,7 @@ class MetroDataPreprocess(DataPreprocess):
         """
         1. Column realign
         2. Replace NaN
+        3.remove data which have invalid lat, lon
         """
         
         # 1. Column realign
@@ -485,6 +510,9 @@ class MetroDataPreprocess(DataPreprocess):
 
         # 2. Replace NaN
         df = MetroDataPreprocess.replace_nan(df)
+
+        # 3.remove data which have invalid lat, lon
+        df = ManageLonLat.return_vaild_data(df)
 
         df.reset_index(drop=True, inplace=True)
 

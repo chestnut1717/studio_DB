@@ -1,6 +1,6 @@
 import mysql.connector
 import pandas as pd
-from typing import List
+from typing import List, Dict
 from tqdm import tqdm
 
 class DBManagement:
@@ -15,12 +15,26 @@ class DBManagement:
                                     database=self.database)
         self.cursor = self.cnx.cursor()
     
+    @staticmethod
+    # bring db info in local text file(secret_key/db_info.txt)
+    def get_db_info(path: str) -> Dict['str','str']:
+        db_info_dict = {}
+
+        with open(path, 'r') as f:
+            for line in f.readlines():
+                line_info = line.split('=')
+                key = line_info[0].strip()
+                val = line_info[1].strip()
+                
+                db_info_dict[key] = val
+
+        return db_info_dict
     # Add quote for insert data to DB like address
     @staticmethod
     def replace_quote(value: str) -> str:
         if value == 'NULL':
             return value
-        return '"{}"'.format(str(value).replace("'", "''"))
+        return '"{}"'.format(str(value).replace("'", "\'"))
 
     # bring table information(columns, PK, etc)
     def set_table(self, table_path: str) -> pd.DataFrame:
@@ -103,9 +117,10 @@ class DBManagement:
     def delete_record(self, table_name: str, opnSfTeamCode: str, mgtNo: str, opnSvcId: str) -> None:
         delete_query = f"""
                         DELETE FROM {table_name}
-                        WHERE opnSfTeamCode = '{opnSfTeamCode}' and mgtNo = '{mgtNo}' and opnSvcId = '{opnSvcId}';
+                        WHERE opnSfTeamCode = {opnSfTeamCode} and mgtNo = {mgtNo} and opnSvcId = {opnSvcId};
                         """
         self.cursor.execute(delete_query)
+
 
     def create_spatial_index(self, table_name: str, coordinates_column: str) -> None:
 

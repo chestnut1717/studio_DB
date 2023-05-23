@@ -73,6 +73,19 @@ class RequestLocalData(RequestData):
             pass
 
         return folders_name_list
+    
+    # get service name to request
+    @staticmethod
+    def get_service_names(path):
+        service_names_list = os.listdir(path)
+        
+        try:
+            service_names_list.remove('.DS_Store')
+        except:
+            pass
+        service_names_list = sorted([name[:-5] for name in service_names_list])
+
+        return service_names_list
 
     @staticmethod
     def get_csvdata(path: str, sep:str =',') -> pd.DataFrame:
@@ -146,7 +159,6 @@ class RequestLocalData(RequestData):
         df = pd.json_normalize(response_dict['result']['body']['rows'][0]['row'])
         return df
     
-
 
 class RequestSeoulBusData(RequestData):
     seoul_bus_url = 'http://openapi.seoul.go.kr:8088/'
