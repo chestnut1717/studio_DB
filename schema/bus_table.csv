@@ -1,8 +1,0 @@
-﻿Columns,Type,Options,Indexes
-StationID,VARCHAR(20),NOT NULL,PRIMARY
-StationName,VARCHAR(40),NOT NULL,PRIMARY
-CityID,SMALLINT UNSIGNED,,
-CityName,VARCHAR(10),,
-lon,CHAR(20),,
-lat,CHAR(20),,
-coordinates,POINT,NOT NULL SRID 4326,

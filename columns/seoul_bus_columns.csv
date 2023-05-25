@@ -1,7 +1,0 @@
-﻿From,To
-STOP_NO,StationID
-STOP_NM,StationName
-CityID,CityID
-CityName,CityName
-XCODE,lon
-YCODE,lat
