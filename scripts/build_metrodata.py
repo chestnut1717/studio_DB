@@ -34,7 +34,7 @@ if __name__ == "__main__":
     print('지하철데이터 수집 완료')
 
     # 3. preprocess
-    metro_columns_path = "columns/metro_columns.csv"
+    metro_columns_path = os.path.join(root_path, "info", "columns", "metro_columns.csv")
     MetroDataPreprocess.set_columns_dict(path=metro_columns_path)
     metro_df_after = MetroDataPreprocess.preprocess(metro_df)
 
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     print(f'성공적으로 MySQL {db_info_dict["database"]} 데이터베이스에 연결 완료')
 
     ## table 정보가 담겨있는 파일 path
-    metro_table_path = os.path.join(root_path, 'schema', 'metro_table.csv')
+    metro_table_path = os.path.join(root_path,"info", 'schema', 'metro_table.csv')
     metro_table_df = dbm.set_table(metro_table_path)
 
     ## take columns which to DB

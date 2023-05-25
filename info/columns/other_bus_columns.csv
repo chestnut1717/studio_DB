@@ -1,0 +1,7 @@
+﻿From,To
+nodeid,StationID
+nodenm,StationName
+CityID,CityID
+CityName,CityName
+gpslong,lon
+gpslati,lat

@@ -31,11 +31,11 @@ if __name__ == "__main__":
     print(f'성공적으로 MySQL {db_info_dict["database"]} 데이터베이스에 연결 완료')
 
     # bring info for localdata table columns
-    localdata_columns_path = os.path.join(root_path, "columns", "localdata_columns.csv")
+    localdata_columns_path = os.path.join(root_path, "info", "columns", "localdata_columns.csv")
     LocalDataPreprocess.set_columns_dict(localdata_columns_path)
 
     # table 정보가 담겨있는 파일 path
-    localdata_table_path = os.path.join(root_path, "schema", "localdata_table.csv")
+    localdata_table_path = os.path.join(root_path, "info", "schema", "localdata_table.csv")
     localdata_table_df = dbm.set_table(localdata_table_path)
     localdata_table_columns = dbm.get_columns(localdata_table_df)
 

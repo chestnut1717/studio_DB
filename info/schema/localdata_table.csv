@@ -1,0 +1,20 @@
+﻿Columns,Type,Options,Indexes
+opnSfTeamCode,CHAR(7),NOT NULL,PRIMARY
+mgtNo,VARCHAR(40),NOT NULL,PRIMARY
+opnSvcId,CHAR(10),NOT NULL,PRIMARY
+updateGbn,CHAR(1),,
+updateDt,DATETIME,,
+bplcNm,VARCHAR(200),,
+sitePostNo,VARCHAR(7),,
+siteWhlAddr,VARCHAR(500),,
+rdnPostNo,VARCHAR(7),,
+rdnWhlAddr,VARCHAR(500),,
+trdStateGbn,VARCHAR(2),,
+dtlStateGbn,VARCHAR(4),,
+lastModTs,DATETIME,,
+uptaeNm,VARCHAR(100),,
+x,CHAR(20),,
+y,CHAR(20),,
+lon,CHAR(20),,
+lat,CHAR(20),,
+coordinates,POINT,NOT NULL SRID 4326,

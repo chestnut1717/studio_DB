@@ -27,11 +27,11 @@ if __name__ == "__main__":
         auth_key_other = key_list[1].split(":")[1].strip()
 
     # 원래 데이터 column들 중, 필요한 column만 명세해둔 파일 path
-    seoul_bus_columns_path = os.path.join(root_path, "columns", "seoul_bus_columns.csv")
-    other_bus_columns_path = os.path.join(root_path, "columns", "other_bus_columns.csv")
+    seoul_bus_columns_path = os.path.join(root_path, "info", "columns", "seoul_bus_columns.csv")
+    other_bus_columns_path = os.path.join(root_path, "info", "columns", "other_bus_columns.csv")
 
     # table 정보가 담겨있는 파일 path
-    bus_table_path = os.path.join(root_path, "schema", "bus_table.csv")
+    bus_table_path = os.path.join(root_path,"info", "schema", "bus_table.csv")
 
     # 1. data request to bus API
     ## get total bus dataframe

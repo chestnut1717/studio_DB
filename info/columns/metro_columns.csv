@@ -1,0 +1,9 @@
+﻿From,To
+railOprIsttCd,RailID
+lnCd,LineID
+stinCd,StationID
+stinNm,StationName
+lonmAdr,oldAddress
+roadNmAdr,roadAddress
+stinLocLon,lon
+stinLocLat,lat
