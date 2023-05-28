@@ -42,22 +42,23 @@ def db_check():
         
         # Query 저장
         ## distance = meter
+        ## bus같은경우는 주소가 저장 안되어있으니 일단 NULL로 다 채우기
         for facility in facilities_type:
             if facility == 'bus':
                 radius_query = f"""
-                SELECT StationName AS Name, '{facility}' AS Kind, ST_Distance_Sphere({location}, coordinates) AS distance, lat, lon
+                SELECT StationName AS Name, '{facility}' AS Kind, ST_Distance_Sphere({location}, coordinates) AS distance, NULL AS address, lat, lon
                 FROM {facility}
                 WHERE ST_Contains(ST_Buffer({location}, {radius_meter}), coordinates) AND ST_Distance_Sphere({location}, coordinates) < {radius_meter}
                 """
             elif facility == 'metro':
                 radius_query = f"""
-                SELECT StationName AS Name, '{facility}' AS Kind, ST_Distance_Sphere({location}, coordinates) AS distance, lat, lon
+                SELECT StationName AS Name, '{facility}' AS Kind, ST_Distance_Sphere({location}, coordinates) AS distance, roadAddress AS address, lat, lon
                 FROM {facility}
                 WHERE ST_Contains(ST_Buffer({location}, {radius_meter}), coordinates) AND ST_Distance_Sphere({location}, coordinates) < {radius_meter}
                 """
             else:
                 radius_query = f"""
-                SELECT bplcNm AS Name, '{facility}' AS Kind, ST_Distance_Sphere({location}, coordinates) AS distance, lat, lon
+                SELECT bplcNm AS Name, '{facility}' AS Kind, ST_Distance_Sphere({location}, coordinates) AS distance, rdnWhlAddr AS address, lat, lon
                 FROM {facility}
                 WHERE ST_Contains(ST_Buffer({location}, {radius_meter}), coordinates) AND ST_Distance_Sphere({location}, coordinates) < {radius_meter}
                 """
@@ -65,6 +66,7 @@ def db_check():
             radius_query_list.append(radius_query)
 
         radius_query = " UNION ALL".join(radius_query_list) + "ORDER BY distance;"
+
 
         # execute
         dbm.cursor.execute(radius_query)
@@ -77,8 +79,9 @@ def db_check():
             query_result_body.append( {'name': row[0],
                                        'kind': row[1],
                                        'distance':int(row[2]),
-                                       'lat': row[3],
-                                       'lon': row[4]
+                                       'address': row[3],
+                                       'lat': row[4],
+                                       'lon': row[5]
                                        }
                                     )
 
