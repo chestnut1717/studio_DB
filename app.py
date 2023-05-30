@@ -1,10 +1,13 @@
 from flask import Flask, request, jsonify, Response
 from utils.db_connector import DBManagement
 import json
+import pandas as pd
+from typing import List
+from utils.manage_response import *
+
 
 app = Flask(__name__)
 
-# def 
 
 @app.route('/')
 def index():
@@ -14,93 +17,94 @@ def index():
 def db_check():
     if request.method == 'GET':
 
-        # DB connect
-        db_info_path = 'secret_key/db_info.txt'
-        db_info_dict = {}
 
-        with open(db_info_path, 'r') as f:
-            for line in f.readlines():
-                line_info = line.split('=')
-                key = line_info[0].strip()
-                val = line_info[1].strip()
-                
-                db_info_dict[key] = val
-
-        dbm = DBManagement(**db_info_dict)
-        print(f'성공적으로 MySQL {db_info_dict["database"]} 데이터베이스에 연결 완료')
-
-        # 문자열 꼴로 들어온 것들을 list 로 변환하기 위함
+        # requested data from web server
         facilities_type = request.args.get('facilities_type').split(',')
-        lat = float(request.args.get('lat'))
-        lon = float(request.args.get('lon'))
-        radius_meter = int(request.args.get('radius'))
+        lat             = float(request.args.get('lat'))
+        lon             = float(request.args.get('lon'))
+        radius_meter    = int(request.args.get('radius'))
         
-        # variable for MySQL
-        ## EPSG 4326
-        location = f'ST_GeomFromText("POINT({lat} {lon})", 4326)'
-        radius_query_list = []
+        # request to rds
+        response_list = request_to_rds(facilities_type, lat, lon, radius_meter)
+
+        total_count   = response_list[0]
+        facility_body = response_list[1]
+        hashtag_list  = response_list[2]
+
+        # response to web_server
+        response_dict = {
+                        'status'  : 200,
+                        'location': {
+                                    'total_count' : total_count,
+                                    'facility_type' : facility_body,
+                                    'hashtag': hashtag_list
+                                    }
+                        }
+
+        response = Response(json.dumps(response_dict), mimetype='application/json', status=200)
         
-        # Query 저장
-        ## distance = meter
-        ## bus같은경우는 주소가 저장 안되어있으니 일단 NULL로 다 채우기
-        for facility in facilities_type:
-            if facility == 'bus':
-                radius_query = f"""
-                SELECT StationName AS Name, '{facility}' AS Kind, ST_Distance_Sphere({location}, coordinates) AS distance, NULL AS address, lat, lon
-                FROM {facility}
-                WHERE ST_Contains(ST_Buffer({location}, {radius_meter}), coordinates) AND ST_Distance_Sphere({location}, coordinates) < {radius_meter}
-                """
-            elif facility == 'metro':
-                radius_query = f"""
-                SELECT StationName AS Name, '{facility}' AS Kind, ST_Distance_Sphere({location}, coordinates) AS distance, roadAddress AS address, lat, lon
-                FROM {facility}
-                WHERE ST_Contains(ST_Buffer({location}, {radius_meter}), coordinates) AND ST_Distance_Sphere({location}, coordinates) < {radius_meter}
-                """
-            else:
-                radius_query = f"""
-                SELECT bplcNm AS Name, '{facility}' AS Kind, ST_Distance_Sphere({location}, coordinates) AS distance, rdnWhlAddr AS address, lat, lon
-                FROM {facility}
-                WHERE ST_Contains(ST_Buffer({location}, {radius_meter}), coordinates) AND ST_Distance_Sphere({location}, coordinates) < {radius_meter}
-                """
-            
-            radius_query_list.append(radius_query)
-
-        radius_query = " UNION ALL".join(radius_query_list) + "ORDER BY distance;"
-
-
-        # execute
-        dbm.cursor.execute(radius_query)
-        query_result = dbm.cursor.fetchall()
-        total_count = len(query_result)
-
-        # save body
-        query_result_body = []
-        for row in query_result:
-            query_result_body.append( {'name': row[0],
-                                       'kind': row[1],
-                                       'distance':int(row[2]),
-                                       'address': row[3],
-                                       'lat': row[4],
-                                       'lon': row[5]
-                                       }
-                                    )
-
-              
-        # Response
-        r = {'status' : 200,
-            'total_count': total_count,
-            'body' : query_result_body
-            }
-        
-        resp = Response(json.dumps(r), mimetype='application/json', status=200)
-
-        # dbm.cnx.close()
-        print('데이터베이스 연결 종료')
-        
-        return resp
+        return response
 
     else:
         return 'Not GET request', 404
+
+@app.route('/db_check_two')
+def db_check_two():
+    if request.method == 'GET':
+        
+        facilities_type = request.args.get('facilities_type').split(',')
+        radius_meter = int(request.args.get('radius'))
+
+        #location 1
+        lat_1 = float(request.args.get('lat_1'))
+        lon_1 = float(request.args.get('lon_1'))
+        #location 2
+        lat_2 = float(request.args.get('lat_2'))
+        lon_2 = float(request.args.get('lon_2'))
+
+        # response for location 1
+        response_list_1 = request_to_rds(facilities_type, lat_1, lon_1, radius_meter)
+        total_count_1, facility_body_1, hashtag_list_1  = response_list_1[0], response_list_1[1], response_list_1[2]
+
+        # response for location 2
+        response_list_2 = request_to_rds(facilities_type, lat_2, lon_2, radius_meter)
+        total_count_2, facility_body_2, hashtag_list_2  = response_list_2[0], response_list_2[1], response_list_2[2]
+
+        # scoring
+        individual_score_1, total_score_1 = calculate_score(facilities_type, total_count_1, facility_body_1)
+        individual_score_2, total_score_2 = calculate_score(facilities_type, total_count_2, facility_body_2)
+
+        
+        # response to web server
+        response_dict = {
+                        'status'  : 200,
+                        'location_1': {
+                                    'total_count' : total_count_1,
+                                    'facility_type' : facility_body_1,
+                                    'hashtag': hashtag_list_1,
+                                    'score' : {
+                                            "total_score": total_score_1,
+                                            "individual_score": individual_score_1
+                                               }
+                                    },
+                        'location_2': {
+                                    'total_count' : total_count_2,
+                                    'facility_type' : facility_body_2,
+                                    'hashtag': hashtag_list_2,
+                                    'score' : {
+                                            "total_score": total_score_2,
+                                            "individual_score": individual_score_2
+                                               }
+                                    },
+                        }
+
+        response = Response(json.dumps(response_dict), mimetype='application/json', status=200)
+        return response
+
+        
+        
+    else:
+        return 'Not Get request', 404
 
 if __name__ == "__main__":
     app.run(debug=True)
