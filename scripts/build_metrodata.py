@@ -27,10 +27,18 @@ if __name__ == "__main__":
     
     # 1. search line for each metro company
     req_metro = RequestMetroData(auth_key_metro)
+
+    metro_info =  {
+                    'serviceKey' : req_metro.auth_key,
+                    'format' : 'JSON',
+                    'railOprIsttCd' : None,
+                    'lnCd' : None,
+                    }
+                    
     result = req_metro.get_metro_cd()
 
     # 2. reques API server
-    metro_df = req_metro.get_apidata()
+    metro_df = req_metro.get_apidata(info=metro_info)
     print('지하철데이터 수집 완료')
 
     # 3. preprocess

@@ -38,8 +38,27 @@ if __name__ == "__main__":
     req_bus_seoul = RequestSeoulBusData(auth_key_seoul)
     req_bus_other = RequestOtherBusData(auth_key_other)
 
-    other_bus_df = req_bus_other.get_apidata()
-    seoul_bus_df = req_bus_seoul.get_apidata()
+
+    other_info = {
+                    'page_size' : 2000,
+                    'serviceKey' : req_bus_other.auth_key,
+                    'pageNo' : 1,
+                    'numOfRows' : 2000,
+                    '_type' : 'json',
+                }
+
+    seoul_info = {
+                'key' : req_bus_seoul.auth_key,
+                'type' : 'json',
+                'service' : 'busStopLocationXyInfo',
+                'start_index' : 1,
+                'end_index' : 1000,
+                'page_size' : 1000
+                }
+    
+
+    other_bus_df = req_bus_other.get_apidata(info=other_info)
+    seoul_bus_df = req_bus_seoul.get_apidata(info=seoul_info)
 
     # # 2. data preprocess
     SeoulBusDataPreprocess.set_columns_dict(seoul_bus_columns_path)
